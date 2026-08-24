@@ -136,6 +136,7 @@ export class BrowserManager {
       const entry = await this.attachRealBrowser(platform);
       this.sessions.set(platform, entry);
       this.status = 'ready';
+      console.log(`[browser] ${platform}: navegador REAL adjunto por CDP (puerto ${entry.port})`);
       entry.browser.on('disconnected', () => {
         this.sessions.delete(platform);
         if (this.sessions.size === 0) this.status = 'closed';
@@ -151,6 +152,7 @@ export class BrowserManager {
       try {
         const ctx = await this.launchPlaywrightFallback(platform);
         this.status = 'ready';
+        console.log(`[browser] ${platform}: FALLBACK automatizado (¡puede provocar captcha!) — ${attachErr.slice(0, 120)}`);
         return ctx;
       } catch (err2) {
         this.status = 'error';
