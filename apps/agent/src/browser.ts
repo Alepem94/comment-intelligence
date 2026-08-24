@@ -19,6 +19,34 @@ const PLATFORM_HOME: Record<Platform, string> = {
   tiktok: 'https://www.tiktok.com/foryou'
 };
 
+const USE_PERSONAL = process.env.CI_USE_PERSONAL_CHROME === '1';
+
+function personalUserDataDir(): string | null {
+  const lad = process.env['LOCALAPPDATA'];
+  if (!lad) return null;
+  const candidates =
+    process.platform === 'win32'
+      ? [
+          path.join(lad, 'Google', 'Chrome', 'User Data'),
+          path.join(lad, 'Microsoft', 'Edge', 'User Data')
+        ]
+      : process.platform === 'darwin'
+        ? [path.join(os.homedir(), 'Library', 'Application Support', 'Google', 'Chrome')]
+        : [
+            path.join(os.homedir(), '.config', 'google-chrome'),
+            path.join(os.homedir(), '.config', 'microsoft-edge')
+          ];
+  return (
+    candidates.find((p) => {
+      try {
+        return fs.existsSync(p);
+      } catch {
+        return false;
+      }
+    }) ?? null
+  );
+}
+
 export type BrowserStatus = 'closed' | 'starting' | 'ready' | 'error';
 
 interface SessionEntry {
@@ -86,9 +114,10 @@ function devtoolsAlive(port: number, timeoutMs = 600): Promise<boolean> {
   });
 }
 
-async function waitForDevtools(port: number, timeoutMs = 20000): Promise<string> {
+async function waitForDevtools(port: number, proc?: ChildProcess | null, timeoutMs = 20000): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    if (proc && proc.exitCode !== null) break;
     const info = await new Promise<{ ws?: string }>((resolve) => {
       const req = http.get(`http://127.0.0.1:${port}/json/version`, (res) => {
         let body = '';
@@ -108,6 +137,7 @@ async function waitForDevtools(port: number, timeoutMs = 20000): Promise<string>
       req.on('error', () => resolve({}));
     });
     if (info.ws) return info.ws;
+    if (proc && proc.exitCode !== null) break;
     await new Promise((r) => setTimeout(r, 400));
   }
   throw new Error('El navegador no abrió su puerto de depuración.');
@@ -119,6 +149,10 @@ export class BrowserManager {
   lastError: string | null = null;
 
   private profileDir(platform: Platform): string {
+    if (USE_PERSONAL) {
+      const dir = personalUserDataDir();
+      if (dir) return dir;
+    }
     const dir = path.join(profilesRoot(), platform);
     fs.mkdirSync(dir, { recursive: true });
     return dir;
@@ -166,25 +200,30 @@ export class BrowserManager {
     const exe = candidateExecutables()[0];
     if (!exe) throw new Error('STAGE_EXE: Chrome/Edge no encontrados en rutas estándar');
 
-    const port = 9235 + ['instagram', 'facebook', 'tiktok'].indexOf(platform);
+    const userDataDir = this.profileDir(platform);
+    const port = USE_PERSONAL ? 9222 : 9235 + ['instagram', 'facebook', 'tiktok'].indexOf(platform);
 
     if (await devtoolsAlive(port)) {
       const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { timeout: 20000 });
       return { browser, proc: null, port };
     }
 
-    const userDataDir = this.profileDir(platform);
     let proc = this.spawnBrowser(exe, port, userDataDir);
 
     try {
-      await waitForDevtools(port);
+      await waitForDevtools(port, proc);
     } catch (firstErr) {
       proc.kill();
+      if (USE_PERSONAL) {
+        throw new Error(
+          'BROWSER_ERROR: tu Chrome est\u00e1 abierto con ese perfil. Cierra TODAS las ventanas de Chrome (revisa la bandeja del sistema) y vuelve a pulsar el bot\u00f3n de la plataforma.'
+        );
+      }
       await this.killStaleForProfile(userDataDir);
       await new Promise((r) => setTimeout(r, 800));
       proc = this.spawnBrowser(exe, port, userDataDir);
       try {
-        await waitForDevtools(port);
+        await waitForDevtools(port, proc);
       } catch (err) {
         proc.kill();
         throw new Error('STAGE_DEVTOOLS: ' + String((err as Error)?.message || err));
@@ -221,7 +260,7 @@ export class BrowserManager {
   }
 
   private async killStaleForProfile(dir: string): Promise<void> {
-    if (process.platform !== 'win32') return;
+    if (process.platform !== 'win32' || USE_PERSONAL) return;
     const safeDir = dir.replace(/'/g, "''");
     const ps =
       `Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" | ` +
@@ -291,16 +330,22 @@ export class BrowserManager {
   }
 
   async closeAll(): Promise<void> {
+    const closed = new Set<Browser>();
     for (const [, entry] of this.sessions) {
-      try {
-        await entry.browser.close();
-      } catch {
-        /* ignore */
+      if (!closed.has(entry.browser)) {
+        closed.add(entry.browser);
+        try {
+          await entry.browser.close();
+        } catch {
+          /* ignore */
+        }
       }
-      try {
-        entry.proc?.kill();
-      } catch {
-        /* ignore */
+      if (!USE_PERSONAL) {
+        try {
+          entry.proc?.kill();
+        } catch {
+          /* ignore */
+        }
       }
     }
     this.sessions.clear();
