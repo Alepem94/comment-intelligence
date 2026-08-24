@@ -1,0 +1,32 @@
+{
+  "name": "comment-intelligence",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Real comment scraping for Instagram, Facebook and TikTok via a local agent + web app",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @ci/web",
+    "dev:agent": "npm run dev -w @ci/agent",
+    "build": "npm run build --workspaces --if-present",
+    "build:web": "npm run build -w @ci/web",
+    "build:agent": "npm run build -w @ci/agent",
+    "package:win": "npm run package:win -w @ci/agent",
+    "package:mac": "npm run package:mac -w @ci/agent",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "tsc -p tsconfig.base.json --noEmit",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "@typescript-eslint/eslint-plugin": "^8.8.1",
+    "@typescript-eslint/parser": "^8.8.1",
+    "eslint": "^9.12.0",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

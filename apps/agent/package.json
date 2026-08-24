@@ -1,0 +1,32 @@
+{
+  "name": "@ci/agent",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "node build.mjs",
+    "test": "vitest run",
+    "electron:dev": "node build.mjs && electron dist-electron/main.cjs",
+    "package:win": "npm run build && electron-builder --win --config electron-builder.yml",
+    "package:mac": "npm run build && electron-builder --mac --config electron-builder.yml"
+  },
+  "dependencies": {
+    "@ci/shared": "*",
+    "@ci/scraper-core": "*",
+    "playwright-core": "^1.47.2",
+    "playwright": "^1.47.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.12",
+    "esbuild": "^0.24.0",
+    "electron": "^31.7.0",
+    "electron-builder": "^25.1.8",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.2"
+  },
+  "type": "module"
+}

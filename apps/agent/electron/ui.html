@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Comment Intelligence Agent</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: #0b1220; color: #e8edf7; padding: 22px; }
+  h1 { font-size: 17px; font-weight: 650; display: flex; align-items: center; gap: 9px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d39988; }
+  .card { background: #121a2c; border: 1px solid #22304f; border-radius: 12px; padding: 16px; margin-top: 14px; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 13.5px; }
+  .k { color: #93a4c3; }
+  code { background: #0d1526; border: 1px solid #24345a; padding: 5px 12px; border-radius: 7px; font-size: 19px; letter-spacing: 3px; color: #7dd3fc; }
+  button { width: 100%; margin-top: 8px; padding: 11px; border-radius: 9px; border: 1px solid #2c3d63; background: #16223c; color: #dbe6ff; font-size: 13.5px; cursor: pointer; }
+  button:hover { background: #1c2b4a; }
+  button.primary { background: #2563eb; border-color: #2563eb; font-weight: 600; }
+  button.primary:hover { background: #1d4fd7; }
+  p.hint { font-size: 12.5px; color: #93a4c3; line-height: 1.55; margin-top: 10px; }
+</style>
+</head>
+<body>
+  <h1><span class="dot"></span> Comment Intelligence</h1>
+  <div class="card">
+    <div class="row"><span class="k">Estado del agente</span><strong id="state">Conectado</strong></div>
+    <div class="row"><span class="k">Navegador</span><strong id="browser">Cerrado</strong></div>
+    <div class="row"><span class="k">Código de emparejamiento</span><code id="code">------</code></div>
+  </div>
+  <button class="primary" id="openIg">Abrir navegador e iniciar sesión (Instagram)</button>
+  <button id="openFb">Abrir navegador (Facebook)</button>
+  <button id="openTt">Abrir navegador (TikTok)</button>
+  <p class="hint">
+    1) Pega el c\u00f3digo en la web app para conectarla con este equipo.<br />
+    2) Inicia sesi\u00f3n en cada red social una sola vez dentro del navegador que abre este agente.<br />
+    3) Tu sesi\u00f3n nunca sale de esta computadora.
+  </p>
+<script>
+  window.ciAgent.onAgentInfo(function (info) {
+    document.getElementById('code').textContent = info.pairingCode;
+  });
+  window.ciAgent.onAgentState(function (s) {
+    if (!s) return;
+    var map = { IDLE: 'Conectado', BUSY: 'Extrayendo...', ERROR: 'Error' };
+    document.getElementById('state').textContent = map[s.state] || s.state;
+    var b = { ready: 'Listo', starting: 'Abriendo...', closed: 'Cerrado', error: 'Error' };
+    document.getElementById('browser').textContent = b[s.browser] || s.browser;
+  });
+  window.ciAgent.onAgentError(function (msg) {
+    document.getElementById('state').textContent = 'Error: ' + msg;
+  });
+  function open(p) { return function () { window.ciAgent.openBrowser(p); }; }
+  document.getElementById('openIg').addEventListener('click', open('instagram'));
+  document.getElementById('openFb').addEventListener('click', open('facebook'));
+  document.getElementById('openTt').addEventListener('click', open('tiktok'));
+</script>
+</body>
+</html>

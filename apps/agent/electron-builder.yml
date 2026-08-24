@@ -1,0 +1,27 @@
+appId: com.commentintelligence.agent
+productName: Comment Intelligence Agent
+directories:
+  output: release
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+asarUnpack:
+  - node_modules/playwright-core/**
+  - node_modules/playwright/**
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: Comment Intelligence Agent Setup ${version}.exe
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: Comment Intelligence Agent
+mac:
+  target:
+    - dmg
+  category: public.app-category.productivity
+  artifactName: Comment Intelligence Agent ${version}.dmg

@@ -1,0 +1,54 @@
+# Estado del proyecto
+
+Actualizado: 2026-08-24
+
+## Fase actual y progreso
+
+**Fase 1–4 completadas en código; Fase 5 completa salvo validación real.**
+Progreso aproximado de construcción: **95%** (falta validar contra plataformas reales y generar instaladores en SO destino).
+
+## Terminado
+
+- Monorepo npm workspaces (apps/web, apps/agent, packages/shared, packages/scraper-core)
+- Web app Next.js export estático: conexión por código, extracción con progreso en vivo,
+  tabla virtualizada, búsqueda/filtros/orden/selección, detalle lateral, tarjetas IG/FB/TikTok,
+  CSV (BOM UTF-8), JPG/PNG scale 3 (individual y por lotes), HTML autocontenido al portapapeles,
+  historial IndexedDB, modo diagnóstico, mensajes de error humanos
+- Agente local: HTTP+WS en 127.0.0.1:8765, emparejamiento por código, token persistente chmod600,
+  perfiles persistentes Playwright (chrome→msedge→chromium fallback), avatar-proxy anti-CORS,
+  stop/timeout/stall detection, shell Electron tray/menubar + ventana de estado
+- Motor genérico `runHarvest` + adapters IG/FB/TikTok autocontenidos (serializables a page.evaluate)
+- Tests: 41 passing (shared 23, scraper-core 15 —incluye fixtures happy-dom y test de autocontención serializada—, agent 3 servidor HTTP)
+- Lint limpio (eslint flat), typecheck limpio en los 4 paquetes
+- Build web OK (static export); build agente OK (esbuild bundles main/preload/cli)
+
+## Parcialmente terminado
+
+- Empaquetado instaladores: config electron-builder lista; falta EJECUTAR package:win (Windows) y package:mac (macOS) en sus SO destino.
+
+## Falta / siguiente tarea
+
+1. Validar Instagram/Facebook/TikTok contra la realidad (ver PRODUCTION_CHECKLIST) y ajustar selectores.
+2. Generar instaladores y probar instalación limpia.
+3. (Opcional) Menú "Instalar navegador runtime" del Electron: hoy vía CLI playwright; cablear botón.
+
+## Estado por plataforma
+
+| Plataforma | Adapter | Tests fixtures | Validado en producción |
+|---|---|---|---|
+| Instagram | ✅ implementado | ✅ 5 casos | ❌ NO VALIDADO CONTRA LA PLATAFORMA REAL |
+| Facebook | ✅ implementado (comment_id estable) | ✅ 3 casos | ❌ NO VALIDADO CONTRA LA PLATAFORMA REAL |
+| TikTok | ✅ implementado (data-e2e + fallbacks) | ✅ 3 casos | ❌ NO VALIDADO CONTRA LA PLATAFORMA REAL |
+
+## Bugs conocidos
+
+- Ninguno abierto en código. Riesgo conocido: los DOM reales difieren de los fixtures; los adapters
+  tienen heurísticas en capas pensadas para absorber cambios menores.
+
+## Comandos
+
+```bash
+npm install && npm test && npm run lint && npm run build
+npm run dev:agent   # + código de emparejamiento en consola
+npm run dev:web     # http://localhost:3000
+```
