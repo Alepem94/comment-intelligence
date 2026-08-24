@@ -19,6 +19,16 @@
 - Cuentas privadas: solo se pueden extraer comentarios visibles para tu cuenta.
 - Stories y publicaciones sin panel de comentarios: no soportadas.
 
+## Captcha en bucle al iniciar sesión
+
+Resuelto desde v0.1.0: el agente ya no lanza un "navegador automatizado" sino tu Chrome/Edge real adjuntándose por el puerto de depuración, por lo que el login se ve normal y el captcha se resuelve una sola vez.
+
+Si aun así ves bucle:
+1. Cierra TODAS las ventanas del navegador del agente.
+2. Cierra y reabre el agente.
+3. Si persiste, borra el perfil: `~\.comment-intelligence\profiles\<plataforma>` y vuelve a iniciar sesión.
+4. Prueba con otra red (Facebook/TikTok) o espera unos minutos: a veces es rate-limit temporal de la plataforma.
+
 ## COMMENTS_NOT_LOADED / pocos comentarios
 
 - Las plataformas cargan comentarios con scroll infinito: espera; el contador avanza solo.

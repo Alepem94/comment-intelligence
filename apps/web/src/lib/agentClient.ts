@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { makeId } from '@ci/shared';
 import type { AgentMessage, AgentStatusPayload, EventMessage, ExtractResult, RequestMessage } from '@ci/shared';

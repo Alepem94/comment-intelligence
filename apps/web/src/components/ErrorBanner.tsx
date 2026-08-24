@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { humanMessage } from '@ci/shared';
 import type { CIErrorCode } from '@ci/shared';

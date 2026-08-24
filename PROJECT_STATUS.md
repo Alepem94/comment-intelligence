@@ -13,14 +13,15 @@ Progreso aproximado de construcción: **95%** (falta validar contra plataformas 
 - Web app Next.js export estático: conexión por código, extracción con progreso en vivo,
   tabla virtualizada, búsqueda/filtros/orden/selección, detalle lateral, tarjetas IG/FB/TikTok,
   CSV (BOM UTF-8), JPG/PNG scale 3 (individual y por lotes), HTML autocontenido al portapapeles,
-  historial IndexedDB, modo diagnóstico, mensajes de error humanos
+  historial IndexedDB, modo diagnóstico, mensajes de error humanos,
+  botones directos "Iniciar sesión" por plataforma en la barra superior
 - Agente local: HTTP+WS en 127.0.0.1:8765, emparejamiento por código, token persistente chmod600,
-  perfiles persistentes Playwright (chrome→msedge→chromium fallback), avatar-proxy anti-CORS,
-  stop/timeout/stall detection, shell Electron tray/menubar + ventana de estado
+  **navegador real (Chrome/Edge) adjunto por CDP con perfiles persistentes** — resuelve el bucle
+  de captcha del login —, avatar-proxy anti-CORS, stop/timeout/stall detection,
+  shell Electron tray/menubar + ventana de estado
 - Motor genérico `runHarvest` + adapters IG/FB/TikTok autocontenidos (serializables a page.evaluate)
-- Tests: 41 passing (shared 23, scraper-core 15 —incluye fixtures happy-dom y test de autocontención serializada—, agent 3 servidor HTTP)
-- Lint limpio (eslint flat), typecheck limpio en los 4 paquetes
-- Build web OK (static export); build agente OK (esbuild bundles main/preload/cli)
+- Smoke test del navegador real: `apps/agent/scripts/smoke.ts` (SMOKE_OK verificado en Windows)
+- Tests: 41 passing; lint limpio; builds web+agente OK
 
 ## Parcialmente terminado
 

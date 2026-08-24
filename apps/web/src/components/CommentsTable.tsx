@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useMemo, useRef, useState } from 'react';
 import type { AppApi, CommentRow } from '@/lib/store';

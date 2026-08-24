@@ -1,6 +1,15 @@
-import path from 'node:path';
+import { spawn, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
-import { chromium, type BrowserContext, type Page } from 'playwright-core';
+import net from 'node:net';
+import os from 'node:os';
+import path from 'node:path';
+import http from 'node:http';
+import {
+  chromium,
+  type Browser,
+  type BrowserContext,
+  type Page
+} from 'playwright-core';
 import { profilesRoot } from './config';
 import type { Platform } from '@ci/shared';
 
@@ -12,10 +21,100 @@ const PLATFORM_HOME: Record<Platform, string> = {
 
 export type BrowserStatus = 'closed' | 'starting' | 'ready' | 'error';
 
-const CHANNELS = ['chrome', 'msedge'] as const;
+interface SessionEntry {
+  browser: Browser;
+  proc: ChildProcess | null;
+  port: number | null;
+}
+
+function candidateExecutables(): string[] {
+  const list: string[] = [];
+  const pf = process.env['ProgramFiles'] || 'C:\\Program Files';
+  const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
+  const lad = process.env['LOCALAPPDATA'] || path.join(os.homedir(), 'AppData', 'Local');
+  if (process.platform === 'win32') {
+    list.push(
+      path.join(pf, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(pf86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(lad, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(pf, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+      path.join(pf86, 'Microsoft', 'Edge', 'Application', 'msedge.exe')
+    );
+  } else if (process.platform === 'darwin') {
+    list.push(
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+      '/Applications/Chromium.app/Contents/MacOS/Chromium'
+    );
+  } else {
+    list.push('/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/microsoft-edge');
+  }
+  return list.filter((p) => {
+    try {
+      return fs.existsSync(p);
+    } catch {
+      return false;
+    }
+  });
+}
+
+function isPortFree(port: number, timeoutMs = 250): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.connect({ port, host: '127.0.0.1' });
+    const done = (free: boolean) => {
+      socket.destroy();
+      resolve(free);
+    };
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => done(false));
+    socket.once('timeout', () => done(true));
+    socket.once('error', () => done(true));
+  });
+}
+
+function devtoolsAlive(port: number, timeoutMs = 600): Promise<boolean> {
+  return new Promise((resolve) => {
+    const req = http.get(`http://127.0.0.1:${port}/json/version`, (res) => {
+      res.resume();
+      resolve(res.statusCode === 200);
+    });
+    req.setTimeout(timeoutMs, () => {
+      req.destroy();
+      resolve(false);
+    });
+    req.on('error', () => resolve(false));
+  });
+}
+
+async function waitForDevtools(port: number, timeoutMs = 20000): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const info = await new Promise<{ ws?: string }>((resolve) => {
+      const req = http.get(`http://127.0.0.1:${port}/json/version`, (res) => {
+        let body = '';
+        res.on('data', (d) => (body += d));
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(body));
+          } catch {
+            resolve({});
+          }
+        });
+      });
+      req.setTimeout(1200, () => {
+        req.destroy();
+        resolve({});
+      });
+      req.on('error', () => resolve({}));
+    });
+    if (info.ws) return info.ws;
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  throw new Error('El navegador no abrió su puerto de depuración.');
+}
 
 export class BrowserManager {
-  private contexts = new Map<Platform, BrowserContext>();
+  private sessions = new Map<Platform, SessionEntry>();
   status: BrowserStatus = 'closed';
   lastError: string | null = null;
 
@@ -26,47 +125,150 @@ export class BrowserManager {
   }
 
   async getContext(platform: Platform): Promise<BrowserContext> {
-    const existing = this.contexts.get(platform);
-    if (existing) return existing;
+    const existing = this.sessions.get(platform);
+    if (existing && existing.browser.isConnected()) {
+      return this.defaultContext(existing.browser);
+    }
     this.status = 'starting';
     this.lastError = null;
-    let lastErr: unknown = null;
-    for (const channel of CHANNELS) {
+
+    try {
+      const entry = await this.attachRealBrowser(platform);
+      this.sessions.set(platform, entry);
+      this.status = 'ready';
+      entry.browser.on('disconnected', () => {
+        this.sessions.delete(platform);
+        if (this.sessions.size === 0) this.status = 'closed';
+      });
+      entry.proc?.on('exit', () => {
+        this.sessions.delete(platform);
+        if (this.sessions.size === 0) this.status = 'closed';
+      });
+      return this.defaultContext(entry.browser);
+    } catch (err) {
+      const attachErr = String((err as Error)?.message || err);
+      this.lastError = attachErr;
+      try {
+        const ctx = await this.launchPlaywrightFallback(platform);
+        this.status = 'ready';
+        return ctx;
+      } catch (err2) {
+        this.status = 'error';
+        this.lastError = attachErr + ' | fallback: ' + String((err2 as Error)?.message || err2);
+        throw new Error('BROWSER_ERROR: no se pudo abrir el navegador local. Instala Chrome o Edge. Detalle: ' + this.lastError);
+      }
+    }
+  }
+
+  private async attachRealBrowser(platform: Platform): Promise<SessionEntry> {
+    const exe = candidateExecutables()[0];
+    if (!exe) throw new Error('STAGE_EXE: Chrome/Edge no encontrados en rutas estándar');
+
+    const port = 9235 + ['instagram', 'facebook', 'tiktok'].indexOf(platform);
+
+    if (await devtoolsAlive(port)) {
+      const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { timeout: 20000 });
+      return { browser, proc: null, port };
+    }
+
+    const userDataDir = this.profileDir(platform);
+    let proc = this.spawnBrowser(exe, port, userDataDir);
+
+    try {
+      await waitForDevtools(port);
+    } catch (firstErr) {
+      proc.kill();
+      await this.killStaleForProfile(userDataDir);
+      await new Promise((r) => setTimeout(r, 800));
+      proc = this.spawnBrowser(exe, port, userDataDir);
+      try {
+        await waitForDevtools(port);
+      } catch (err) {
+        proc.kill();
+        throw new Error('STAGE_DEVTOOLS: ' + String((err as Error)?.message || err));
+      }
+    }
+
+    let browser: Browser;
+    try {
+      browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, {
+        timeout: 20000
+      });
+    } catch (err) {
+      proc.kill();
+      throw new Error('STAGE_CDP: ' + String((err as Error)?.message || err).slice(0, 200));
+    }
+    return { browser, proc, port };
+  }
+
+  private spawnBrowser(exe: string, port: number, userDataDir: string): ChildProcess {
+    return spawn(
+      exe,
+      [
+        `--remote-debugging-port=${port}`,
+        `--user-data-dir=${userDataDir}`,
+        '--no-first-run',
+        '--no-default-browser-check',
+        '--disable-features=DialMediaRouteProvider',
+        '--restore-last-session=false',
+        `--window-size=1380,940`,
+        'about:blank'
+      ],
+      { stdio: 'ignore', detached: false }
+    );
+  }
+
+  private async killStaleForProfile(dir: string): Promise<void> {
+    if (process.platform !== 'win32') return;
+    const safeDir = dir.replace(/'/g, "''");
+    const ps =
+      `Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" | ` +
+      `Where-Object { $_.CommandLine -like '*${safeDir}*' } | ` +
+      `ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`;
+    await new Promise<void>((resolve) => {
+      const p = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { stdio: 'ignore' });
+      const t = setTimeout(resolve, 8000);
+      p.on('exit', () => {
+        clearTimeout(t);
+        resolve();
+      });
+      p.on('error', () => {
+        clearTimeout(t);
+        resolve();
+      });
+    });
+  }
+
+  private defaultContext(browser: Browser): BrowserContext {
+    const ctx = browser.contexts()[0];
+    if (ctx) return ctx;
+    throw new Error('El navegador no expuso contexto por CDP.');
+  }
+
+  private async launchPlaywrightFallback(platform: Platform): Promise<BrowserContext> {
+    const channels = ['chrome', 'msedge'] as const;
+    for (const channel of channels) {
       try {
         const ctx = await chromium.launchPersistentContext(this.profileDir(platform), {
           channel,
           headless: false,
           viewport: { width: 1380, height: 940 },
-          args: ['--disable-blink-features=AutomationControlled']
+          args: ['--disable-blink-features=AutomationControlled'],
+          ignoreDefaultArgs: ['--enable-automation']
         });
-        this.contexts.set(platform, ctx);
-        ctx.on('close', () => this.contexts.delete(platform));
-        this.status = 'ready';
+        ctx.on('close', () => this.sessions.delete(platform));
         return ctx;
-      } catch (err) {
-        lastErr = err;
+      } catch {
+        continue;
       }
     }
-    try {
-      const ctx = await chromium.launchPersistentContext(this.profileDir(platform), {
-        headless: false,
-        viewport: { width: 1380, height: 940 }
-      });
-      this.contexts.set(platform, ctx);
-      ctx.on('close', () => this.contexts.delete(platform));
-      this.status = 'ready';
-      return ctx;
-    } catch (err) {
-      lastErr = err;
-    }
-    this.status = 'error';
-    this.lastError = String((lastErr as Error)?.message || lastErr || 'unknown');
-    throw new Error('BROWSER_ERROR: no se pudo abrir el navegador local. Instala Chrome o Edge.');
+    throw new Error('fallback fallido');
   }
 
   async openForLogin(platform: Platform): Promise<void> {
     const ctx = await this.getContext(platform);
-    const page = ctx.pages()[0] ?? (await ctx.newPage());
+    let page = ctx.pages().find((p) => (p.url() === 'about:blank' || p.url() === '')) ?? null;
+    if (!page) page = await ctx.newPage();
     await page.goto(PLATFORM_HOME[platform], { timeout: 45000 }).catch(() => undefined);
     await page.bringToFront().catch(() => undefined);
   }
@@ -77,21 +279,33 @@ export class BrowserManager {
   }
 
   async activePage(platform: Platform): Promise<Page | null> {
-    const ctx = this.contexts.get(platform);
-    if (!ctx) return null;
-    const pages = ctx.pages();
-    return pages.length ? pages[pages.length - 1] : null;
+    try {
+      const ctx = await this.getContext(platform);
+      const pages = ctx.pages();
+      return pages.length ? pages[pages.length - 1] : null;
+    } catch {
+      return null;
+    }
   }
 
   async closeAll(): Promise<void> {
-    for (const [, ctx] of this.contexts) {
-      await ctx.close().catch(() => undefined);
+    for (const [, entry] of this.sessions) {
+      try {
+        await entry.browser.close();
+      } catch {
+        /* ignore */
+      }
+      try {
+        entry.proc?.kill();
+      } catch {
+        /* ignore */
+      }
     }
-    this.contexts.clear();
+    this.sessions.clear();
     this.status = 'closed';
   }
 
   has(platform: Platform): boolean {
-    return this.contexts.has(platform);
+    return this.sessions.has(platform);
   }
 }

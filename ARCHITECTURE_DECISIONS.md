@@ -37,6 +37,18 @@ Alternativas descartadas:
 - Tauri: no incluye runtime Node; habría que compilar sidecars por SO para Playwright.
 - pkg/nexe: empaquetado frágil con Playwright (binarios y rutas dinámicas).
 
+### 5.1 Navegador real adjunto por CDP (decisión posterior a la primera validación)
+
+Lanzar el navegador DESDE Playwright deja `navigator.webdriver = true` y banderas de automatización → Instagram mete en bucle de captcha al intentar loguearse. Solución implementada en `apps/agent/src/browser.ts`:
+
+1. El agente **ejecuta tu Chrome/Edge real como proceso normal** (`--remote-debugging-port=9235/9236/9237`, un puerto fijo por plataforma) con perfil persistente propio.
+2. Se conecta vía `chromium.connectOverCDP('http://127.0.0.1:<puerto>')`.
+3. Resultado: fingerprint de navegador 100% humano (login y captchas se resuelven una vez), sesiones persistentes, y el agente conserva control total (goto/evaluate/scroll) para el scraping.
+4. Si el navegador ya está abierto con ese perfil, se reconecta en lugar de lanzar otro. Antes de relanzar limpia procesos huérfanos del mismo perfil.
+5. Fallback automático al método anterior (launchPersistentContext) si no hay Chrome/Edge instalados.
+
+Prueba automatizada: `apps/agent/scripts/smoke.ts` (adjunta, navega, evalúa y cierra).
+
 ## 6. Arquitectura de adapters
 
 `PlatformAdapter` (en `scraper-core`) define 4 funciones **autocontenidas** que corren DENTRO de la página:

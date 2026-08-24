@@ -1,7 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import type { Platform } from '@ci/shared';
 import type { AppApi } from '@/lib/store';
+
+const PLATFORMS: Array<{ id: Platform; label: string }> = [
+  { id: 'instagram', label: 'Instagram' },
+  { id: 'facebook', label: 'Facebook' },
+  { id: 'tiktok', label: 'TikTok' }
+];
 
 export default function ConnectBar({ api }: { api: AppApi }) {
   const [port, setPort] = useState('8765');
@@ -24,14 +31,18 @@ export default function ConnectBar({ api }: { api: AppApi }) {
 
   if (api.connState === 'connected' || api.connState === 'busy') {
     return (
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <span className={`text-sm font-medium ${color}`}>{label[api.connState]}</span>
-        <button
-          onClick={() => void api.openBrowser('instagram')}
-          className="rounded-lg border border-edge px-3 py-1.5 text-xs text-slate-200 hover:bg-panel"
-        >
-          Abrir navegador
-        </button>
+        <span className="hidden text-xs text-slate-500 sm:inline">Iniciar sesión:</span>
+        {PLATFORMS.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => void api.openBrowser(p.id)}
+            className="rounded-lg border border-edge px-2.5 py-1.5 text-xs text-slate-200 hover:bg-panel"
+          >
+            {p.label}
+          </button>
+        ))}
       </div>
     );
   }
