@@ -39,7 +39,7 @@ Progreso aproximado de construcción: **95%** (falta validar contra plataformas 
 |---|---|---|---|
 | Instagram | ✅ v2 (DOM real: sin article/time, filas por hoja "Responder") | ✅ 4 casos | ✅ **VALIDADO 2026-08-24**: 44 comentarios reales (15→44 con auto-click del botón ⊕ "cargar más"), scroll+dedupe OK |
 | Facebook | ✅ implementado (comment_id estable) | ✅ 3 casos | ❌ NO VALIDADO CONTRA LA PLATAFORMA REAL |
-| TikTok | ✅ implementado (data-e2e + fallbacks) | ✅ 3 casos | ❌ NO VALIDADO CONTRA LA PLATAFORMA REAL |
+| TikTok | ⚠️ en calibración — HALLAZGOS 2026-08-24: (1) el video abre en visor feed y el panel de comentarios NO carga solo: hay que hacer clic en `[data-e2e="comment-icon"]`; (2) la SPA tarda en hidratar (esperar `[data-e2e="comment-list"]` hasta 30s); (3) sin login-modal detectado con sesión. SIGUIENTE PASO: tras el clic, muestrear anatomía de items (diag-tt.ts ya lo hace) y ajustar pageExtract/pageProbe + agregar pageOpenComments al Adapter/motor. | ✅ 3 casos (fixture viejo) | ❌ NO VALIDADO |
 
 Notas de validación Instagram:
 - URLs /reel/ y /reels/ se normalizan a /p/<code>/ (el visor de feed no renderiza la lista de comentarios).

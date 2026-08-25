@@ -30,9 +30,12 @@ Herramienta para extraer comentarios REALES de Instagram, Facebook y TikTok: web
 
 ## Falta (trabaja SOLO aquí)
 
-1. **Validación real por plataforma** siguiendo `PRODUCTION_CHECKLIST.md`. Empieza por Instagram: `npm run dev:agent` + `npm run dev:web`, abre un reel REAL, usa el Modo Diagnóstico; si el adapter no encuentra comentarios, guarda el HTML real (`document.querySelector('main').outerHTML` desde DevTools del navegador del agente), actualiza `packages/scraper-core/fixtures/instagram.html` y corrige SOLO `src/adapters/instagram.ts` hasta pasar los tests. Repite con Facebook y TikTok. Actualiza PROJECT_STATUS.md con cada validación.
-2. Generar instaladores: `cd apps/agent && npm run package:win` (en Windows) y `npm run package:mac` (en macOS); probar instalación limpia.
-3. Opcional: cablear botón "Instalar navegador runtime" del Electron a `npx playwright install chromium`.
+1. **TIKTOK (en curso, hallazgos ya confirmados)**:
+   - El video abre en visor feed; el panel de comentarios NO carga solo → hacer clic en `[data-e2e="comment-icon"]` y esperar `[data-e2e="comment-list"]` (hasta 30s; la SPA hidrata lento).
+   - Script listo: `apps/agent/scripts/diag-tt.ts "URL"` (abre perfil tiktok puerto 9237, clic al icono, vuelca items). Ejecutarlo y con el HTML real de los items ajustar `packages/scraper-core/src/adapters/tiktok.ts` (pageExtract/pageProbe) y agregar `pageOpenComments?(): number` al Adapter (`base.ts`) + llamada en el settle loop de `harvest.ts` cuando container=false.
+   - Luego: fixture tiktok.html con attrs reales, tests, `npm run package:win`, instalador nuevo, validar extracción real.
+2. **Facebook**: validar igual (login en navegador del agente, URL share/p o /posts/, diag con `scripts/diag-rows.ts` adaptado). Adapter ya tiene pageLoadMore para "Ver más comentarios".
+3. Respuestas anidadas IG: verificar expansión en post con muchas ("Ver las N respuestas" con svg — pageOpenReplies ya maneja svg-only; confirmar en vivo).
 
 ## Comandos
 
