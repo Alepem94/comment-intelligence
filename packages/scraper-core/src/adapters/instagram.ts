@@ -270,7 +270,12 @@ export function pageLoadMore(): number {
   }
 
   const root: HTMLElement = scrollContainer || scope || document.body;
-  const cands = root.querySelectorAll('button, [role="button"], div[tabindex]');
+  if (scrollContainer) {
+    scrollContainer.scrollTop = scrollContainer.scrollHeight;
+  }
+  const cands = root.querySelectorAll(
+    'button, [role="button"], div[tabindex], span[role="button"], span[tabindex]'
+  );
   let best: HTMLElement | null = null;
   let bestTop = Infinity;
   for (let i = 0; i < cands.length; i++) {
@@ -280,9 +285,10 @@ export function pageLoadMore(): number {
     if (!el.querySelector('svg')) continue;
     const w = el.clientWidth;
     const h = el.clientHeight;
-    if (w < 18 || w > 100 || h < 18 || h > 100) continue;
+    if (w < 14 || w > 120 || h < 14 || h > 120) continue;
     const rect = el.getBoundingClientRect();
-    if (rect.top < lastTop - 12) continue;
+    if (rect.top < lastTop - 80) continue;
+    if (rect.width === 0 && rect.height === 0) continue;
     if (rect.top < bestTop) { bestTop = rect.top; best = el; }
   }
   if (best) { best.click(); return 1; }
