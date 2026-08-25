@@ -2,7 +2,7 @@ import type { Platform } from './types';
 
 const PATTERNS: Array<{ platform: Platform; re: RegExp }> = [
   { platform: 'instagram', re: /^https?:\/\/(www\.|m\.)?instagram\.com\/(reel|reels|p)\/[A-Za-z0-9_-]+/i },
-  { platform: 'facebook', re: /^https?:\/\/(www\.|m\.|web\.)?facebook\.com\/([^/?]+\/(posts|videos|photos|reel)\/|watch\/?\?v=|photo(\.php)?\/?(\?fbid=)?)/i },
+  { platform: 'facebook', re: /^https?:\/\/(www\.|m\.|web\.)?facebook\.com\/([^/?]+\/(posts|videos|photos|reel)\/|watch\/?\?v=|photo(\.php)?\/?(\?fbid=)?|story\.php\?|permalink\.php\?|share\/[pvr]\/|groups\/[^/?]+\/(posts|videos)\/)/i },
   { platform: 'tiktok', re: /^https?:\/\/(www\.|m\.)?tiktok\.com\/(@[\w.\-]+\/video\/\d+|v\/\d+)/i }
 ];
 
@@ -48,13 +48,12 @@ export function extractPostId(rawUrl: string, platform: Platform): string | null
       return m ? m[1] : null;
     }
     if (platform === 'facebook') {
-      const m = u.pathname.match(/\/(?:posts|videos|photos|reel)\/(?:pfbid[\w]+|\d+|[A-Za-z0-9_.-]+)/);
-      if (!m) {
-        const v = u.searchParams.get('v');
-        return v || null;
-      }
-      const parts = u.pathname.split('/').filter(Boolean);
-      return parts[parts.length - 1] ?? null;
+      const v = u.searchParams.get('v');
+      if (v) return v;
+      const storyFbid = u.searchParams.get('story_fbid');
+      if (storyFbid) return storyFbid;
+      const m = u.pathname.match(/\/(?:posts|videos|photos|reel|share\/p|share\/v)\/([^/?]+)/);
+      return m ? m[1] : null;
     }
     return null;
   } catch {
