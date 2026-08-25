@@ -30,10 +30,10 @@ Herramienta para extraer comentarios REALES de Instagram, Facebook y TikTok: web
 
 ## Falta (trabaja SOLO aquí)
 
-1. **TIKTOK (en curso, hallazgos ya confirmados)**:
-   - El video abre en visor feed; el panel de comentarios NO carga solo → hacer clic en `[data-e2e="comment-icon"]` y esperar `[data-e2e="comment-list"]` (hasta 30s; la SPA hidrata lento).
-   - Script listo: `apps/agent/scripts/diag-tt.ts "URL"` (abre perfil tiktok puerto 9237, clic al icono, vuelca items). Ejecutarlo y con el HTML real de los items ajustar `packages/scraper-core/src/adapters/tiktok.ts` (pageExtract/pageProbe) y agregar `pageOpenComments?(): number` al Adapter (`base.ts`) + llamada en el settle loop de `harvest.ts` cuando container=false.
-   - Luego: fixture tiktok.html con attrs reales, tests, `npm run package:win`, instalador nuevo, validar extracción real.
+1. **TIKTOK (90% diagnosticado — implementar ya)**:
+   - CONFIRMADO en vivo (scripts/diag-tt.ts): tras hidratar (~30s), clic en `[data-e2e="comment-icon"]` (índice 0) abre el panel. El panel NO usa data-e2e: usa CLASSES `DivCommentListContainer` (contenedor scrollable), `DivCommentItemWrapper` (cada comentario), `DivCommentContentWrapper`, `DivCommentHeaderWrapper`, `DivCommentSubContentSplit`, `DivCommentCountContainer`.
+   - IMPLEMENTAR en `packages/scraper-core/src/adapters/tiktok.ts`: (a) nuevo `pageOpenComments()` que haga click en `[data-e2e="comment-icon"]` (agregar `pageOpenComments?(): number` a Adapter en base.ts y llamarlo en el settle loop de harvest.ts cuando commentContainerDetected=false); (b) pageProbe: container = existe `[class*="DivCommentListContainer"]`, commentsInDom = count `[class*="DivCommentItemWrapper"]`; (c) pageExtract: items=`[class*="DivCommentItemWrapper"]`, username=primer `a[href^="/@"]` (href slice 1), texto=textContent de `[class*="DivCommentContentWrapper"]` menos username, likes=parseCount de `[class*="DivCommentCountContainer"]` o span numérico, time=leaf corto tipo "hace 4 d"/"4-12"; (d) pageScrollStep: scroll de DivCommentListContainer.
+   - Validar en vivo con `npx tsx scripts/test-loadmore.ts "<URL tiktok>" 50` (adaptarlo a tiktok: usa adapter tiktok y puerto 9237). Luego fixture+tests, `npm run package:win`, instalador, validar con la web.
 2. **Facebook**: validar igual (login en navegador del agente, URL share/p o /posts/, diag con `scripts/diag-rows.ts` adaptado). Adapter ya tiene pageLoadMore para "Ver más comentarios".
 3. Respuestas anidadas IG: verificar expansión en post con muchas ("Ver las N respuestas" con svg — pageOpenReplies ya maneja svg-only; confirmar en vivo).
 

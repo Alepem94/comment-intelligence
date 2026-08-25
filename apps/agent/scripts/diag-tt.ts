@@ -47,15 +47,20 @@ if (url) {
   await page.goto(url, { timeout: 60000, waitUntil: 'domcontentloaded' });
 }
 try {
-  await page.waitForSelector('[data-e2e="comment-list"]', { timeout: 8000 });
+  await page.waitForFunction(`document.querySelectorAll('[data-e2e="comment-icon"]').length > 0`, { timeout: 45000 });
 } catch {
-  const clicked = await page.evaluate(`(() => {
-    const icons = document.querySelectorAll('[data-e2e="comment-icon"]');
+  console.error('AVISO: comment-icon nunca apareció');
+}
+const clicked = await page.evaluate(`(() => {
+  const icons = document.querySelectorAll('[data-e2e="comment-icon"]');
     if (icons.length) { icons[0].click(); return icons.length; }
-    return 0;
-  })()`);
-  console.error('click comment-icon:', clicked);
-  await page.waitForSelector('[data-e2e="comment-list"]', { timeout: 20000 }).catch(() => console.error('panel no apareció'));
+  return 0;
+})()`);
+console.error('click comment-icon:', clicked);
+try {
+  await page.waitForSelector('[data-e2e="comment-list"]', { timeout: 25000 });
+} catch {
+  console.error('panel no apareció');
 }
 await page.waitForTimeout(3000);
 
@@ -74,6 +79,11 @@ const raw = `(() => {
   return JSON.stringify({
     url: location.href,
     title: document.title.slice(0, 60),
+    commentClasses: (() => {
+      const out = [];
+      for (const x of document.querySelectorAll('[class*="omment"]')) out.push(String(x.className).slice(0, 50));
+      return Array.from(new Set(out)).slice(0, 8);
+    })(),
     commentList: !!list,
     listScroll: list ? { sh: list.scrollHeight, ch: list.clientHeight } : null,
     itemCount: items.length,
