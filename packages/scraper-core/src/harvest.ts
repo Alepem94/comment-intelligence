@@ -34,7 +34,11 @@ export const DEFAULT_HARVEST_CONFIG: HarvestConfig = {
 };
 
 function serialize(fn: () => unknown): string {
-  return '(' + fn.toString() + ')()';
+  return (
+    'typeof __name==="undefined"&&(window.__name=function(f){return f;});(' +
+    fn.toString() +
+    ')()'
+  );
 }
 
 async function sleep(ms: number): Promise<void> {

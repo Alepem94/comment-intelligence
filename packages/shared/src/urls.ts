@@ -20,8 +20,8 @@ export function normalizePostUrl(rawUrl: string, platform: Platform): string {
     const u = new URL(rawUrl.trim());
     u.hash = '';
     if (platform === 'instagram') {
-      const m = u.pathname.match(/\/(reel|reels|p)\/([A-Za-z0-9_-]+)/);
-      if (m) return `https://www.instagram.com/${m[1] === 'reels' ? 'reel' : m[1]}/${m[2]}/`;
+      const m = u.pathname.match(/\/(reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
+      if (m) return `https://www.instagram.com/p/${m[2]}/`;
       return `https://www.instagram.com${u.pathname}`;
     }
     if (platform === 'facebook') return `https://www.facebook.com${u.pathname}${u.search}`;

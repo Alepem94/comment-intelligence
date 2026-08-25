@@ -27,7 +27,8 @@ describe('detectPlatform', () => {
 
 describe('normalizePostUrl + extractPostId', () => {
   it('normalizes instagram reels', () => {
-    expect(normalizePostUrl('https://www.instagram.com/reels/CxAbC123/?igsh=abc#frag', 'instagram')).toBe('https://www.instagram.com/reel/CxAbC123/');
+    expect(normalizePostUrl('https://www.instagram.com/reels/CxAbC123/?igsh=abc#frag', 'instagram')).toBe('https://www.instagram.com/p/CxAbC123/');
+    expect(normalizePostUrl('https://www.instagram.com/reel/CxAbC123/', 'instagram')).toBe('https://www.instagram.com/p/CxAbC123/');
     expect(extractPostId('https://www.instagram.com/reel/CxAbC123/', 'instagram')).toBe('CxAbC123');
   });
   it('normalizes tiktok videos', () => {

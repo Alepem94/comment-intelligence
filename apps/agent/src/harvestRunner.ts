@@ -39,7 +39,11 @@ export class HarvestRunner {
     const url = page.url();
     let probe: { pageDetected?: boolean; postDetected?: boolean; loggedIn?: boolean | null; commentContainerDetected?: boolean; commentsInDom?: number };
     try {
-      probe = await page.evaluate('(' + adapter.pageProbe.toString() + ')()');
+      probe = await page.evaluate(
+        'typeof __name==="undefined"&&(window.__name=function(f){return f;});(' +
+          adapter.pageProbe.toString() +
+          ')()'
+      );
     } catch (err) {
       throw new CIError('DOM_CHANGED', String((err as Error).message).slice(0, 200));
     }

@@ -1,4 +1,4 @@
-// @vitest-environment happy-dom
+﻿// @vitest-environment happy-dom
 import { describe, expect, it, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -24,18 +24,21 @@ describe('InstagramAdapter', () => {
   it('extracts top-level comments and replies with real fixture data', () => {
     const out = ig.pageExtract();
     expect(out.length).toBe(5);
-    expect(out.find((c) => c.username === 'brand.oficial')?.text).toContain('\u00a1Gracias Mar\u00eda!');
-    expect(out.find((c) => c.username === 'maria.gomez')?.text).toContain('Me encant');
-    expect(out.filter((c) => c.is_reply).length).toBe(2);
-    expect(out.find((c) => c.username === 'carla_ruiz')?.likes).toBe(145);
-    expect(out.find((c) => c.username === 'marketing.tips')?.likes).toBe(1204);
+    expect(out.find((c) => c.username === 'soyconder')?.text).toBe('Vamooooooo\ud83d\udd25\ud83d\udd25');
+    expect(out.find((c) => c.username === 'soyconder')?.likes).toBe(618);
+    expect(out.find((c) => c.username === 'soyconder')?.reply_count).toBe(3);
+    expect(out.find((c) => c.username === 'brennn.97')?.text).toContain('quiero los doss');
+    expect(out.find((c) => c.username === 'juli_eth_0_0')?.likes).toBe(265);
   });
 
-  it('parses iso timestamps and avatar urls', () => {
+  it('parses relative time text and detects replies', () => {
     const out = ig.pageExtract();
-    const carla = out.find((c) => c.username === 'carla_ruiz');
-    expect(carla?.datetime).toBe('2026-08-21T18:45:00.000Z');
-    expect(String(carla?.avatar)).toContain('carla.jpg');
+    expect(out.find((c) => c.username === 'soyconder')?.time_text).toBe('4 d');
+    expect(out.filter((c) => c.is_reply).length).toBe(1);
+    const reply = out.find((c) => c.username === 'brand.oficial');
+    expect(reply?.is_reply).toBe(true);
+    expect(reply?.parent_id).toBe('carla_ruiz');
+    expect(reply?.text).toBe('\u00a1Hola! En nuestra web \ud83d\ude0a');
   });
 
   it('is fully self-contained when serialized', () => {
