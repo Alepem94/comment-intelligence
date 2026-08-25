@@ -231,6 +231,26 @@ export function pageOpenReplies(): number {
   return clicked;
 }
 
+export function pageLoadMore(): number {
+  const els = Array.prototype.slice.call(
+    document.querySelectorAll('[role="button"], button, span, div')
+  );
+  for (let i = 0; i < els.length; i++) {
+    const el = els[i] as HTMLElement;
+    const t = ((el.innerText || el.textContent || '') + '').replace(/\s+/g, ' ').trim();
+    if (!t || t.length > 60) continue;
+    if (
+      /^(ver m\u00e1s comentarios|view more comments|ver \d+ comentarios m\u00e1s|m\u00e1s comentarios|ver los \d+ comentarios)$/i.test(t) ||
+      (/comentarios/i.test(t) && /^(ver|view|mostrar|show|m\u00e1s|more)/i.test(t))
+    ) {
+      const target = (el.closest('[role="button"], button') as HTMLElement) || el;
+      target.click();
+      return 1;
+    }
+  }
+  return 0;
+}
+
 const adapter: Adapter = {
   platform: 'facebook',
   domains: ['facebook.com'],
@@ -238,6 +258,7 @@ const adapter: Adapter = {
   pageProbe,
   pageExtract,
   pageScrollStep,
-  pageOpenReplies
+  pageOpenReplies,
+  pageLoadMore
 };
 export default adapter;

@@ -209,19 +209,81 @@ export function pageScrollStep(): boolean {
 }
 
 export function pageOpenReplies(): number {
+  const EXP = /^Ver (las )?\d+\s+respuestas?$|^Ver respuesta$/i;
   let clicked = 0;
-  const els = Array.prototype.slice.call(document.querySelectorAll('span, div, button'));
+  const els = Array.prototype.slice.call(document.querySelectorAll('span, div, button, [role="button"]'));
   for (const el of els) {
-    if (clicked >= 10) break;
-    if (el.children.length > 0) continue;
+    if (clicked >= 12) break;
     const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
-    if (/^Ver (las )?\d+\s+respuestas?$/i.test(t) || /^Ver respuesta$/i.test(t)) {
-      const target = (el.closest('[role="button"]') || el) as HTMLElement;
-      target.click();
-      clicked++;
+    if (!EXP.test(t)) continue;
+    const kids = el.children;
+    let onlySvg = true;
+    for (let i = 0; i < kids.length; i++) {
+      if ((kids[i] as Element).tagName !== 'svg' && (kids[i] as Element).querySelector('svg') === null && (kids[i] as Element).textContent) { onlySvg = false; break; }
     }
+    const isLeaf = kids.length === 0;
+    const svgOnly = onlySvg && kids.length > 0 && el.querySelector('svg') !== null;
+    if (!isLeaf && !svgOnly) continue;
+    const target = ((el as HTMLElement).closest('[role="button"]') as HTMLElement) || (el as HTMLElement);
+    target.click();
+    clicked++;
   }
   return clicked;
+}
+
+export function pageLoadMore(): number {
+  const labeled = document.querySelectorAll('[aria-label]');
+  for (let i = 0; i < labeled.length; i++) {
+    const al = labeled[i].getAttribute('aria-label') || '';
+    if (/cargar m\u00e1s comentarios|load more comments|ver m\u00e1s comentarios|m\u00e1s comentarios/i.test(al)) {
+      (labeled[i] as HTMLElement).click();
+      return 1;
+    }
+  }
+  const responders = Array.prototype.slice.call(
+    document.querySelectorAll('span, div, button')
+  ).filter(
+    (el: Element) => el.children.length === 0 && (el.textContent || '').trim() === 'Responder'
+  );
+  if (!responders.length) return 0;
+
+  let lastTop = -Infinity;
+  for (const r of responders) {
+    const rect = (r as HTMLElement).getBoundingClientRect();
+    if (rect.top > lastTop) lastTop = rect.top;
+  }
+
+  let scope: HTMLElement | null = responders[0] as HTMLElement;
+  let scrollContainer: HTMLElement | null = null;
+  while (scope && scope.parentElement) {
+    const p = scope.parentElement;
+    const st = getComputedStyle(p);
+    if ((st.overflowY === 'auto' || st.overflowY === 'scroll' || st.overflowY === 'overlay') && p.scrollHeight > p.clientHeight + 50) {
+      scrollContainer = p;
+      break;
+    }
+    if (p === document.body) break;
+    scope = p;
+  }
+
+  const root: HTMLElement = scrollContainer || scope || document.body;
+  const cands = root.querySelectorAll('button, [role="button"], div[tabindex]');
+  let best: HTMLElement | null = null;
+  let bestTop = Infinity;
+  for (let i = 0; i < cands.length; i++) {
+    const el = cands[i] as HTMLElement;
+    const txt = (el.textContent || '').trim();
+    if (txt) continue;
+    if (!el.querySelector('svg')) continue;
+    const w = el.clientWidth;
+    const h = el.clientHeight;
+    if (w < 18 || w > 100 || h < 18 || h > 100) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.top < lastTop - 12) continue;
+    if (rect.top < bestTop) { bestTop = rect.top; best = el; }
+  }
+  if (best) { best.click(); return 1; }
+  return 0;
 }
 
 const adapter: Adapter = {
@@ -231,6 +293,7 @@ const adapter: Adapter = {
   pageProbe,
   pageExtract,
   pageScrollStep,
-  pageOpenReplies
+  pageOpenReplies,
+  pageLoadMore
 };
 export default adapter;

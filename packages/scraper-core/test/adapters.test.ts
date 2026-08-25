@@ -46,6 +46,10 @@ describe('InstagramAdapter', () => {
     expect(serialized.length).toBe(5);
     expect((serialized as Array<{ username: string }>)[0].username).toBeTruthy();
   });
+
+  it('clicks the load-more button when present', () => {
+    expect(ig.pageLoadMore()).toBe(1);
+  });
 });
 
 describe('FacebookAdapter', () => {

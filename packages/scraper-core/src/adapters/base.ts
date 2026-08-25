@@ -17,6 +17,7 @@ export interface Adapter {
   pageExtract(): RawComment[];
   pageScrollStep(): boolean;
   pageOpenReplies(): number;
+  pageLoadMore?(): number;
 }
 
 export interface HarvestConfig {

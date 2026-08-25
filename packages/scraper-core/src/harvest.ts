@@ -81,6 +81,8 @@ export async function runHarvest(
   let scrolls = 0;
   let rounds = 0;
   let stallRounds = 0;
+  let loadMoreClicks = 0;
+  let loadMoreFails = 0;
   let lastCount = -1;
   let lastCommentText: string | null = null;
 
@@ -95,6 +97,7 @@ export async function runHarvest(
     duplicatesTotal += res.duplicates;
     if (res.added > 0) {
       stallRounds = 0;
+      loadMoreFails = 0;
       const last = collected[collected.length - 1];
       lastCommentText = last ? String(last.text || '').slice(0, 120) : null;
     } else {
@@ -112,6 +115,16 @@ export async function runHarvest(
     }
 
     if (collected.length >= cfg.limit) break;
+
+    if (res.added === 0 && adapter.pageLoadMore && loadMoreClicks < 60 && loadMoreFails < 5) {
+      const clicked = await page.evaluate<number>(serialize(adapter.pageLoadMore)).catch(() => 0);
+      if (clicked > 0) {
+        loadMoreClicks++;
+        await sleep(cfg.roundDelayMs);
+        continue;
+      }
+      loadMoreFails++;
+    }
 
     if (cfg.includeReplies) {
       await page.evaluate<number>(serialize(adapter.pageOpenReplies));
