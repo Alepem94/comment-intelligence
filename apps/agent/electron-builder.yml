@@ -1,4 +1,4 @@
-appId: com.commentintelligence.agent
+﻿appId: com.commentintelligence.agent
 productName: Comment Intelligence Agent
 directories:
   output: release
@@ -10,6 +10,7 @@ asarUnpack:
   - node_modules/playwright-core/**
   - node_modules/playwright/**
 win:
+  signAndEditExecutable: false
   target:
     - target: nsis
       arch:

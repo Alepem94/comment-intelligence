@@ -47,6 +47,12 @@ npm run package:win
 
 Resultado: `apps\agent\release\Comment Intelligence Agent Setup 0.1.0.exe`
 
+> **Nota de build interna**: para evitar el error de symlinks de `winCodeSign` en Windows sin
+> privilegios de administrador, `electron-builder.yml` usa `signAndEditExecutable: false`
+> (el `.exe` sale con icono/metadata por defecto). Para una build "bonita": activa el *Modo
+> desarrollador* de Windows (Configuración → Privacidad y seguridad → Para desarrolladores),
+> quita esa línea y regenera. La firma oficial requiere certificado de código (opcional).
+
 Distribución: súbelo a Google Drive/Dropbox/SharePoint del equipo y comparte el enlace junto con `TEAM_GUIDE.md`.
 
 > El instalador NO incluye Chrome/Edge (ya vienen con Windows) ni Chromium. Si alguien no tiene ninguno, el agente ofrece descargar el runtime desde su menú.
