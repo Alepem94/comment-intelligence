@@ -37,7 +37,7 @@ Progreso aproximado de construcción: **95%** (falta validar contra plataformas 
 
 | Plataforma | Adapter | Tests fixtures | Validado en producción |
 |---|---|---|---|
-| Instagram | ✅ v2 (DOM real: sin article/time, filas por hoja "Responder") | ✅ 3 casos | ✅ **VALIDADO 2026-08-24**: 15 comentarios reales extraídos de reel/p con sesión real, scroll+dedupe OK |
+| Instagram | ✅ v2 (DOM real: sin article/time, filas por hoja "Responder") | ✅ 4 casos | ✅ **VALIDADO 2026-08-24**: 44 comentarios reales (15→44 con auto-click del botón ⊕ "cargar más"), scroll+dedupe OK |
 | Facebook | ✅ implementado (comment_id estable) | ✅ 3 casos | ❌ NO VALIDADO CONTRA LA PLATAFORMA REAL |
 | TikTok | ✅ implementado (data-e2e + fallbacks) | ✅ 3 casos | ❌ NO VALIDADO CONTRA LA PLATAFORMA REAL |
 
