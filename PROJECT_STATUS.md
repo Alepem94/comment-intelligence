@@ -37,9 +37,14 @@ Progreso aproximado de construcción: **95%** (falta validar contra plataformas 
 
 | Plataforma | Adapter | Tests fixtures | Validado en producción |
 |---|---|---|---|
-| Instagram | ✅ implementado | ✅ 5 casos | ❌ NO VALIDADO CONTRA LA PLATAFORMA REAL |
+| Instagram | ✅ v2 (DOM real: sin article/time, filas por hoja "Responder") | ✅ 3 casos | ✅ **VALIDADO 2026-08-24**: 15 comentarios reales extraídos de reel/p con sesión real, scroll+dedupe OK |
 | Facebook | ✅ implementado (comment_id estable) | ✅ 3 casos | ❌ NO VALIDADO CONTRA LA PLATAFORMA REAL |
 | TikTok | ✅ implementado (data-e2e + fallbacks) | ✅ 3 casos | ❌ NO VALIDADO CONTRA LA PLATAFORMA REAL |
+
+Notas de validación Instagram:
+- URLs /reel/ y /reels/ se normalizan a /p/<code>/ (el visor de feed no renderiza la lista de comentarios).
+- Login del navegador del agente resuelto adjuntando Chrome real por CDP (sin webdriver).
+- Pendiente menor: expansión de respuestas anidadas ("Ver las N respuestas") a verificar en post con respuestas abiertas.
 
 ## Bugs conocidos
 
