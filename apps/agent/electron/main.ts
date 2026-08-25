@@ -76,13 +76,30 @@ async function start(): Promise<void> {
       } catch {}
     }
   });
-  const port = await server.start();
 
   showWindow();
   win?.webContents.on('did-finish-load', () => {
-    win?.webContents.send('agent-info', { port, pairingCode: tokens.pairingCode, version: '0.1.0' });
+    win?.webContents.send('agent-info', { port: 0, pairingCode: tokens.pairingCode, version: '0.1.0' });
   });
-  refreshTray('IDLE');
+
+  try {
+    const port = await server.start();
+    refreshTray('IDLE');
+    win?.webContents.on('did-finish-load', () => {
+      win?.webContents.send('agent-info', { port, pairingCode: tokens.pairingCode, version: '0.1.0' });
+    });
+    win?.webContents.send('agent-info', { port, pairingCode: tokens.pairingCode, version: '0.1.0' });
+  } catch (err) {
+    const msg = String((err as Error)?.message || err);
+    const friendly = msg.includes('EADDRINUSE')
+      ? 'Ya hay otro Comment Intelligence Agent corriendo (puerto 8765). Ci\u00e9rralo (revisa la bandeja y terminales abiertas) y vuelve a abrir esta aplicaci\u00f3n.'
+      : 'Error al iniciar: ' + msg.slice(0, 200);
+    refreshTray('ERROR');
+    win?.webContents.send('agent-error', friendly);
+    win?.webContents.on('did-finish-load', () => {
+      win?.webContents.send('agent-error', friendly);
+    });
+  }
 }
 
 app.whenReady().then(() => {

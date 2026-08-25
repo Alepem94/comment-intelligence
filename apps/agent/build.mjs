@@ -1,4 +1,5 @@
 import { build } from 'esbuild';
+import { copyFileSync } from 'node:fs';
 
 const common = {
   bundle: true,
@@ -27,3 +28,7 @@ await build({
   entryPoints: ['electron/preload.ts'],
   outfile: 'dist-electron/preload.cjs'
 });
+
+copyFileSync('electron/ui.html', 'dist-electron/ui.html');
+console.log('copied ui.html -> dist-electron/ui.html');
+
