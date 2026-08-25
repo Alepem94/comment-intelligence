@@ -208,6 +208,7 @@ export class BrowserManager {
       return { browser, proc: null, port };
     }
 
+    if (!USE_PERSONAL) await this.killStaleForProfile(userDataDir);
     let proc = this.spawnBrowser(exe, port, userDataDir);
 
     try {

@@ -63,10 +63,12 @@ export function pageExtract(): RawComment[] {
   );
   const rowSet = new Set<Element>();
   for (const r of responders) {
-    let node: Element | null = r;
+    let node: Element = r;
     let picked: Element | null = null;
-    for (let i = 0; i < 8 && node.parentElement; i++) {
-      node = node.parentElement as Element;
+    for (let i = 0; i < 8; i++) {
+      const parent = node.parentElement as Element | null;
+      if (!parent) break;
+      node = parent;
       let respCount = 0;
       for (const other of responders) if (node.contains(other)) respCount++;
       if (respCount >= 2) break;
@@ -151,7 +153,7 @@ export function pageExtract(): RawComment[] {
         }
         break;
       }
-      node = node.parentElement;
+      node = node.parentElement as Element;
     }
 
     let avatar: string | null = null;
@@ -255,8 +257,9 @@ export function pageLoadMore(): number {
 
   let scope: HTMLElement | null = responders[0] as HTMLElement;
   let scrollContainer: HTMLElement | null = null;
-  while (scope && scope.parentElement) {
-    const p = scope.parentElement;
+  while (scope) {
+    const p = scope.parentElement as HTMLElement | null;
+    if (!p) break;
     const st = getComputedStyle(p);
     if ((st.overflowY === 'auto' || st.overflowY === 'scroll' || st.overflowY === 'overlay') && p.scrollHeight > p.clientHeight + 50) {
       scrollContainer = p;

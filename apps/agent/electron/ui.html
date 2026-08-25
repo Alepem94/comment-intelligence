@@ -21,13 +21,13 @@
 </style>
 </head>
 <body>
-  <h1><span class="dot"></span> Comment Intelligence</h1>
+  <h1><span class="dot"></span> Comment Intelligence <span id="version" style="font-size:11px;color:#64748b;font-weight:400"></span></h1>
   <div class="card">
     <div class="row"><span class="k">Estado del agente</span><strong id="state">Conectado</strong></div>
     <div class="row"><span class="k">Navegador</span><strong id="browser">Cerrado</strong></div>
-    <div class="row"><span class="k">Código de emparejamiento</span><code id="code">------</code></div>
+    <div class="row"><span class="k">CÃ³digo de emparejamiento</span><code id="code">------</code></div>
   </div>
-  <button class="primary" id="openIg">Abrir navegador e iniciar sesión (Instagram)</button>
+  <button class="primary" id="openIg">Abrir navegador e iniciar sesiÃ³n (Instagram)</button>
   <button id="openFb">Abrir navegador (Facebook)</button>
   <button id="openTt">Abrir navegador (TikTok)</button>
   <p class="hint">
@@ -38,6 +38,7 @@
 <script>
   window.ciAgent.onAgentInfo(function (info) {
     document.getElementById('code').textContent = info.pairingCode;
+    document.getElementById('version').textContent = 'v' + info.version;
   });
   window.ciAgent.onAgentState(function (s) {
     if (!s) return;
