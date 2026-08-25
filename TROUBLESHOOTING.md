@@ -21,13 +21,17 @@
 
 ## Captcha en bucle al iniciar sesión
 
-Resuelto desde v0.1.0: el agente ya no lanza un "navegador automatizado" sino tu Chrome/Edge real adjuntándose por el puerto de depuración, por lo que el login se ve normal y el captcha se resuelve una sola vez.
+El agente usa tu Chrome/Edge real adjunto por puerto de depuración (`navigator.webdriver = false`), así que el login se ve normal.
 
-Si aun así ves bucle:
-1. Cierra TODAS las ventanas del navegador del agente.
-2. Cierra y reabre el agente.
-3. Si persiste, borra el perfil: `~\.comment-intelligence\profiles\<plataforma>` y vuelve a iniciar sesión.
-4. Prueba con otra red (Facebook/TikTok) o espera unos minutos: a veces es rate-limit temporal de la plataforma.
+Si el captcha sigue en bucle:
+1. Verifica en la **terminal del agente** la línea `[browser] instagram: navegador REAL adjunto por CDP (puerto 9235)`. Si no aparece, reinicia el agente.
+2. F12 → Console → `navigator.webdriver` debe ser `false`.
+3. Cierra todas las ventanas del navegador del agente, borra `~\.comment-intelligence\profiles\<plataforma>` y reintenta con perfil limpio.
+4. Si persiste: tu IP quedó marcada por intentos anteriores automatizados → espera 30-60 min o usa otra red (hotspot del celular). También puedes validar mientras tanto con Facebook/TikTok o extrayendo de un reel público sin login.
+
+## ¿Puedo usar mi propio perfil de Chrome (donde ya tengo sesión)?
+
+**No es posible técnicamente.** Desde Chrome 136 (marzo 2025), Google ignora el puerto de depuración cuando se apunta al perfil por defecto — es una protección anti-robo-de-sesiones y ninguna herramienta puede saltársela. El diseño correcto: inicia sesión UNA vez por red dentro del navegador del agente; el perfil dedicado guarda esa sesión para siempre (como cualquier "mantener sesión iniciada").
 
 ## COMMENTS_NOT_LOADED / pocos comentarios
 
