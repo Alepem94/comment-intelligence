@@ -53,6 +53,7 @@ interface SessionEntry {
   browser: Browser;
   proc: ChildProcess | null;
   port: number | null;
+  headless: boolean;
 }
 
 function candidateExecutables(): string[] {
@@ -158,7 +159,8 @@ export class BrowserManager {
     return dir;
   }
 
-  async getContext(platform: Platform): Promise<BrowserContext> {
+  async getContext(platform: Platform, opts: { headless?: boolean } = {}): Promise<BrowserContext> {
+    const wantHeadless = opts.headless === true;
     const existing = this.sessions.get(platform);
     if (existing && existing.browser.isConnected()) {
       return this.defaultContext(existing.browser);
@@ -167,7 +169,7 @@ export class BrowserManager {
     this.lastError = null;
 
     try {
-      const entry = await this.attachRealBrowser(platform);
+      const entry = await this.attachRealBrowser(platform, wantHeadless);
       this.sessions.set(platform, entry);
       this.status = 'ready';
       console.log(`[browser] ${platform}: navegador REAL adjunto por CDP (puerto ${entry.port})`);
@@ -196,7 +198,7 @@ export class BrowserManager {
     }
   }
 
-  private async attachRealBrowser(platform: Platform): Promise<SessionEntry> {
+  private async attachRealBrowser(platform: Platform, wantHeadless: boolean): Promise<SessionEntry> {
     const exe = candidateExecutables()[0];
     if (!exe) throw new Error('STAGE_EXE: Chrome/Edge no encontrados en rutas estándar');
 
@@ -205,11 +207,11 @@ export class BrowserManager {
 
     if (await devtoolsAlive(port)) {
       const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { timeout: 20000 });
-      return { browser, proc: null, port };
+      return { browser, proc: null, port, headless: wantHeadless };
     }
 
     if (!USE_PERSONAL) await this.killStaleForProfile(userDataDir);
-    let proc = this.spawnBrowser(exe, port, userDataDir);
+    let proc = this.spawnBrowser(exe, port, userDataDir, wantHeadless);
 
     try {
       await waitForDevtools(port, proc);
@@ -222,7 +224,7 @@ export class BrowserManager {
       }
       await this.killStaleForProfile(userDataDir);
       await new Promise((r) => setTimeout(r, 800));
-      proc = this.spawnBrowser(exe, port, userDataDir);
+      proc = this.spawnBrowser(exe, port, userDataDir, wantHeadless);
       try {
         await waitForDevtools(port, proc);
       } catch (err) {
@@ -240,16 +242,17 @@ export class BrowserManager {
       proc.kill();
       throw new Error('STAGE_CDP: ' + String((err as Error)?.message || err).slice(0, 200));
     }
-    return { browser, proc, port };
+    return { browser, proc, port, headless: wantHeadless };
   }
 
-  private spawnBrowser(exe: string, port: number, userDataDir: string): ChildProcess {
+  private spawnBrowser(exe: string, port: number, userDataDir: string, headless = false): ChildProcess {
     return spawn(
       exe,
       [
         `--remote-debugging-port=${port}`,
         `--user-data-dir=${userDataDir}`,
         '--no-first-run',
+        ...(headless ? ['--headless=new', '--window-size=1380,940'] : []),
         '--no-default-browser-check',
         '--disable-features=DialMediaRouteProvider',
         '--restore-last-session=false',
@@ -307,8 +310,32 @@ export class BrowserManager {
     throw new Error('fallback fallido');
   }
 
+  async closePlatform(platform: Platform): Promise<void> {
+    const entry = this.sessions.get(platform);
+    if (!entry) return;
+    try {
+      await entry.browser.close();
+    } catch {
+      /* ignore */
+    }
+    if (!USE_PERSONAL) {
+      try {
+        entry.proc?.kill();
+      } catch {
+        /* ignore */
+      }
+    }
+    this.sessions.delete(platform);
+    if (this.sessions.size === 0) this.status = 'closed';
+  }
+
   async openForLogin(platform: Platform): Promise<void> {
-    const ctx = await this.getContext(platform);
+    const existing = this.sessions.get(platform);
+    if (existing && existing.headless) {
+      await this.closePlatform(platform);
+      await new Promise((r) => setTimeout(r, 600));
+    }
+    const ctx = await this.getContext(platform, { headless: false });
     let page = ctx.pages().find((p) => (p.url() === 'about:blank' || p.url() === '')) ?? null;
     if (!page) page = await ctx.newPage();
     await page.goto(PLATFORM_HOME[platform], { timeout: 45000 }).catch(() => undefined);

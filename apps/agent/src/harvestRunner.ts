@@ -71,7 +71,7 @@ export class HarvestRunner {
     this.busy = true;
     this.stopRequested = false;
     try {
-      const context = await this.browsers.getContext(opts.platform);
+      const context = await this.browsers.getContext(opts.platform, { headless: true });
       const page = await context.newPage();
       const harvestPage: HarvestPageLike = {
         goto: (url, options) => page.goto(url, { timeout: options?.timeout ?? 45000 }),
@@ -102,6 +102,13 @@ export class HarvestRunner {
         comments: rawToComments(result.comments as RawWithPlatform[], opts.platform, opts.url, postId),
         diagnostics: result.diagnostics
       };
+    } catch (err) {
+      if (err instanceof CIError && err.code === 'NOT_LOGGED_IN') {
+        await this.browsers.closePlatform(opts.platform).catch(() => undefined);
+        await this.browsers.openForLogin(opts.platform).catch(() => undefined);
+        throw new CIError('NOT_LOGGED_IN', 'ventana de login abierta');
+      }
+      throw err;
     } finally {
       this.busy = false;
     }
